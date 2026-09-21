@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Feliz Día de las Flores Amarillas</title>
+
+<style>
+/* ======================================================================
+   CAMPO DE FLORES AMARILLAS — regalo interactivo
+   Todo el archivo es un único HTML autocontenido: no usa internet,
+   no usa imágenes externas ni fuentes externas, no usa frameworks.
+   ====================================================================== */
+
+/* ----------------------------------------------------------------------
+   1) TOKENS DE DISEÑO — edita aquí los colores del regalo
+   ---------------------------------------------------------------------- */
+:root{
+  /* cielo: de noche a amanecer cálido */
+  --cielo-noche-1:   #0a0a14;
+  --cielo-noche-2:   #14121f;
+  --cielo-amanecer-1:#241a2e;
+  --cielo-amanecer-2:#4a2e3a;
+  --cielo-amanecer-3:#8a4a3f;
+  --cielo-amanecer-4:#d98a3d;
+  --cielo-amanecer-5:#f4c04a;
+
+  /* flores y tierra */
+  --oro:        #f4c430;
+  --oro-oscuro: #c99a1e;
+  --oro-claro:  #ffe9a3;
+  --centro-flor:#a9631a;
+  --tallo:      #3f6b34;
+  --tallo-claro:#5c8f4a;
+  --tierra-1:   #241811;
+  --tierra-2:   #4a3423;
+
+  --texto-claro:#faf3e2;
+  --texto-suave:rgba(250,243,226,.72);
+
+  /* tipografía: una sola familia elegante, sin depender de internet */
+  --fuente: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --fuente-ui: -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ----------------------------------------------------------------------
+   2) BASE
+   ---------------------------------------------------------------------- */
+*{ box-sizing:border-box; }
+html,body{
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  background:var(--cielo-noche-1);
+  font-family:var(--fuente);
+  -webkit-tap-highlight-color:transparent;
+}
+button{ font-family:inherit; }
+:focus-visible{ outline:2px solid var(--oro-claro); outline-offset:3px; }
+
+/* ----------------------------------------------------------------------
+   3) PANTALLA 1 — introducción oscura y minimalista
+   ---------------------------------------------------------------------- */
+#intro{
+  position:fixed; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2.2rem;
+  background:
+    radial-gradient(ellipse at 50% 30%, var(--cielo-noche-2), var(--cielo-noche-1) 70%);
+  transition:opacity 1.4s ease, visibility 1.4s ease;
+  z-index:10;
+  padding:2rem;
+  text-align:center;
+}
+#intro.oculto{ opacity:0; visibility:hidden; pointer-events:none; }
+
+#intro .linea{
+  color:var(--texto-claro);
+  font-size:clamp(1.6rem, 6vw, 2.6rem);
+  letter-spacing:.02em;
+  opacity:0;
+  transform:translateY(10px);
+  transition:opacity 1.6s ease, transform 1.6s ease;
+}
+#intro .linea.visible{ opacity:1; transform:translateY(0); }
+#intro .linea + .linea{ font-size:clamp(1.05rem, 3.6vw, 1.4rem); color:var(--texto-suave); }
+
+#boton-abrir{
+  margin-top:.6rem;
+  padding:.9rem 2.1rem;
+  border-radius:999px;
+  border:1px solid rgba(244,196,48,.55);
+  background:transparent;
+  color:var(--oro-claro);
+  font-size:1.02rem;
+  letter-spacing:.02em;
+  cursor:pointer;
+  opacity:0;
+  transform:translateY(10px);
+  transition:opacity 1.6s ease, transform 1.6s ease,
+             background .35s ease, color .35s ease, border-color .35s ease;
+}
+#boton-abrir.visible{ opacity:1; transform:translateY(0); }
+#boton-abrir:hover, #boton-abrir:focus-visible{
+  background:var(--oro);
+  color:#241811;
+  border-color:var(--oro);
+}
+
+/* ----------------------------------------------------------------------
+   4) PANTALLA 2 — el campo
+   ---------------------------------------------------------------------- */
+#escena{
+  position:fixed; inset:0;
+  overflow:hidden;
+}
+
+#cielo{
+  position:absolute; inset:0;
+  background:linear-gradient(to bottom, var(--cielo-noche-1), var(--cielo-noche-2));
+  transition:background 3.5s ease;
+}
+#cielo.fase-1{ background:linear-gradient(to bottom, var(--cielo-noche-2), var(--cielo-amanecer-1)); }
+#cielo.fase-2{ background:linear-gradient(to bottom, var(--cielo-amanecer-1), var(--cielo-amanecer-2) 55%, var(--cielo-amanecer-3)); }
+#cielo.fase-3{ background:linear-gradient(to bottom, var(--cielo-amanecer-2), var(--cielo-amanecer-3) 45%, var(--cielo-amanecer-4)); }
+#cielo.fase-4{ background:linear-gradient(to bottom, var(--cielo-amanecer-3) 0%, var(--cielo-amanecer-4) 55%, var(--cielo-amanecer-5) 100%); }
+
+/* estrellas discretas, se desvanecen con el amanecer */
+#estrellas{
+  position:absolute; inset:0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, #fff, transparent),
+    radial-gradient(1px 1px at 80% 15%, #fff, transparent),
+    radial-gradient(1px 1px at 35% 10%, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 60% 25%, #fff, transparent),
+    radial-gradient(1px 1px at 90% 35%, #fff, transparent),
+    radial-gradient(1px 1px at 20% 40%, #fff, transparent),
+    radial-gradient(1px 1px at 50% 8%, #fff, transparent);
+  opacity:.55;
+  transition:opacity 3s ease;
+}
+#estrellas.oculto{ opacity:0; }
+
+/* zoom suave de cámara sobre toda la escena, para el cierre */
+#zoom-envoltura{
+  position:absolute; inset:0;
+  transform:scale(1);
+  transform-origin:50% 62%;
+  transition:transform 4s cubic-bezier(.22,.61,.36,1);
+}
+#zoom-envoltura.acercar{ transform:scale(1.22); }
+
+/* tierra */
+#tierra{
+  position:absolute; left:0; right:0; bottom:0;
+  height:42%;
+  background:linear-gradient(to bottom, var(--tierra-2), var(--tierra-1));
+  transform:translateY(100%);
+  transition:transform 1.6s cubic-bezier(.22,.61,.36,1);
+  box-shadow: 0 -1px 40px rgba(0,0,0,.4) inset;
+}
+#tierra.visible{ transform:translateY(0); }
+#tierra::before{
+  /* leve textura de horizonte iluminado por el amanecer, sin imágenes */
+  content:"";
+  position:absolute; left:0; right:0; top:0; height:6px;
+  background:linear-gradient(to right, transparent, rgba(244,196,48,.35), transparent);
+  opacity:0;
+  transition:opacity 3s ease 1s;
+}
+#tierra.visible::before{ opacity:1; }
+
+/* campo interactivo donde crecen las flores */
+#campo{
+  position:absolute; left:0; right:0; bottom:0;
+  height:42%;
+  cursor:pointer;
+}
+
+/* semilla inicial y brote, antes de que exista la primera flor real */
+#semilla{
+  position:absolute; left:50%; bottom:4%;
+  width:6px; height:6px; border-radius:50%;
+  background:var(--oro-oscuro);
+  transform:translateX(-50%) scale(0);
+  transition:transform .8s cubic-bezier(.34,1.56,.64,1);
+}
+#semilla.visible{ transform:translateX(-50%) scale(1); }
+#semilla.germinando{
+  animation:brote 1s ease-out forwards;
+}
+@keyframes brote{
+  0%{ height:6px; border-radius:50%; background:var(--oro-oscuro); }
+  100%{ height:22px; width:3px; border-radius:2px; background:var(--tallo-claro); }
+}
+
+/* ---- una flor individual ------------------------------------------- */
+.flor{
+  position:absolute;
+  bottom:0;
+  left:var(--x, 50%);
+  transform:translateX(-50%) scale(var(--escala, 1));
+  width:1px; height:1px; /* el tamaño real lo dan los hijos, posicionados desde este punto */
+}
+.flor-interior{
+  position:relative;
+  transform-origin:50% 100%;
+  animation:balanceo var(--sway-dur, 4s) ease-in-out infinite;
+  animation-delay:var(--sway-delay, 0s);
+}
+@keyframes balanceo{
+  0%,100%{ transform:rotate(-2.6deg); }
+  50%{ transform:rotate(2.6deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  .flor-interior{ animation:none; }
+}
+
+.tallo{
+  position:absolute; left:0; bottom:0;
+  width:3px; height:0;
+  background:linear-gradient(to top, var(--tallo), var(--tallo-claro));
+  transform:translateX(-50%);
+  border-radius:2px;
+  transition:height 1s cubic-bezier(.22,.61,.36,1);
+}
+.flor.crecida .tallo, .flor.creciendo .tallo{ height:var(--alto-tallo, 64px); }
+
+.hoja{
+  position:absolute; left:0; bottom:calc(var(--alto-tallo, 64px) * .38);
+  width:16px; height:8px;
+  background:var(--tallo-claro);
+  border-radius:0 100% 0 100%;
+  transform:translate(-2px,0) rotate(-18deg) scale(0);
+  transform-origin:0% 50%;
+  opacity:.9;
+  transition:transform .6s ease .5s;
+}
+.flor.crecida .hoja, .flor.creciendo .hoja{ transform:translate(-2px,0) rotate(-18deg) scale(1); }
+
+.cabeza{
+  position:absolute; left:0; bottom:var(--alto-tallo, 64px);
+  width:0; height:0;
+  transform:translate(-50%, 0) scale(0) rotate(var(--rot, 0deg));
+  transition:transform .7s cubic-bezier(.34,1.4,.64,1) .35s;
+}
+.flor.crecida .cabeza, .flor.creciendo .cabeza{ transform:translate(-50%, 0) scale(1) rotate(var(--rot, 0deg)); }
+
+.petalo{
+  position:absolute; left:-5px; top:-15px;
+  width:10px; height:16px;
+  background:linear-gradient(to top, var(--oro-oscuro), var(--oro) 55%, var(--oro-claro));
+  border-radius:60% 60% 60% 60% / 90% 90% 40% 40%;
+  transform-origin:50% 100%;
+  transform:rotate(calc(var(--i) * 45deg));
+}
+
+.centro{
+  position:absolute; left:-4.5px; top:-4.5px;
+  width:9px; height:9px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #d98a2a, var(--centro-flor) 70%);
+  box-shadow:0 0 4px rgba(0,0,0,.25) inset;
+}
+
+/* pétalos / partículas flotando */
+.particula{
+  position:absolute;
+  width:7px; height:10px;
+  background:var(--oro-claro);
+  border-radius:60% 60% 60% 60% / 90% 90% 40% 40%;
+  opacity:.85;
+  pointer-events:none;
+  animation:flotar linear forwards;
+}
+@keyframes flotar{
+  0%{ transform:translate(0,0) rotate(0deg); opacity:0; }
+  8%{ opacity:.85; }
+  100%{ transform:translate(var(--deriva-x), -115vh) rotate(var(--giro)); opacity:0; }
+}
+
+/* ----------------------------------------------------------------------
+   5) TEXTOS QUE APARECEN SOBRE LA ESCENA
+   ---------------------------------------------------------------------- */
+#texto-escena{
+  position:absolute; left:0; right:0; top:0;
+  height:58%;
+  display:flex; align-items:flex-end; justify-content:center;
+  padding:0 6vw 4vh;
+  text-align:center;
+  pointer-events:none;
+}
+#texto-escena::before{
+  content:"";
+  position:absolute; inset:0;
+  background:linear-gradient(to bottom, rgba(10,10,20,.15), rgba(10,10,20,0) 60%);
+}
+#texto-escena p{
+  position:relative;
+  margin:0;
+  color:var(--texto-claro);
+  font-size:clamp(1.15rem, 3.6vw, 1.7rem);
+  line-height:1.5;
+  text-shadow:0 2px 18px rgba(0,0,0,.35);
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity 1.8s ease, transform 1.8s ease;
+  max-width:26ch;
+}
+#texto-escena p.visible{ opacity:1; transform:translateY(0); }
+
+/* firma final */
+#firma{
+  position:absolute; left:0; right:0; bottom:6%;
+  text-align:center;
+  color:var(--texto-suave);
+  font-size:1rem;
+  white-space:pre-line;
+  opacity:0;
+  transition:opacity 2.2s ease;
+  pointer-events:none;
+}
+#firma.visible{ opacity:1; }
+
+/* ----------------------------------------------------------------------
+   6) CONTROL DE MÚSICA — discreto, en una esquina
+   ---------------------------------------------------------------------- */
+#control-musica{
+  position:fixed; right:calc(16px + env(safe-area-inset-right,0px));
+  bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  z-index:20;
+  width:46px; height:46px;
+  border-radius:50%;
+  border:1px solid rgba(244,196,48,.4);
+  background:rgba(10,10,20,.45);
+  backdrop-filter:blur(4px);
+  color:var(--oro-claro);
+  font-size:1.05rem;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer;
+  opacity:0;
+  transform:scale(.85);
+  transition:opacity 1s ease, transform 1s ease, background .3s ease;
+}
+#control-musica.visible{ opacity:1; transform:scale(1); }
+#control-musica.invitar{ animation:pulso 1.8s ease-in-out infinite; }
+@keyframes pulso{
+  0%,100%{ box-shadow:0 0 0 0 rgba(244,196,48,.35); }
+  50%{ box-shadow:0 0 0 9px rgba(244,196,48,0); }
+}
+#control-musica:hover, #control-musica:focus-visible{ background:rgba(10,10,20,.7); }
+
+/* ----------------------------------------------------------------------
+   7) RESPONSIVE
+   ---------------------------------------------------------------------- */
+@media (max-width:480px){
+  #tierra, #campo{ height:38%; }
+  #texto-escena{ height:64%; padding-bottom:3.4vh; }
+}
+</style>
+</head>
+<body>
+
+<!-- =====================================================================
+     PANTALLA 1 — introducción
+     Para cambiar el nombre o el texto inicial, edita las líneas dentro
+     de #intro, o mejor: cambia CONFIG.NOMBRE y CONFIG.MENSAJES_INTRO
+     en el bloque de JavaScript al final del archivo.
+     ===================================================================== -->
+<div id="intro">
+  <p class="linea" id="linea-nombre"></p>
+  <p class="linea" id="linea-subtexto"></p>
+  <button id="boton-abrir" type="button">🌻 Abrir mi regalo</button>
+</div>
+
+<!-- =====================================================================
+     PANTALLA 2 — el campo de flores
+     ===================================================================== -->
+<div id="escena" aria-hidden="true">
+  <div id="cielo"></div>
+  <div id="estrellas"></div>
+
+  <div id="zoom-envoltura">
+    <div id="tierra"></div>
+    <div id="campo"></div>
+    <div id="semilla"></div>
+  </div>
+
+  <div id="texto-escena">
+    <p id="parrafo-mensaje"></p>
+  </div>
+
+  <div id="firma"></div>
+</div>
+
+<button id="control-musica" type="button" aria-label="Reproducir o pausar música">🔈</button>
+<audio id="musica-fondo" loop preload="auto"></audio>
+
+<script>
+/* ========================================================================
+   CONFIGURACIÓN — edita libremente esta sección para personalizar el regalo
+   ======================================================================== */
+const CONFIG = {
+  // Nombre de la persona que recibe el regalo
+  NOMBRE: "Geraldine",
+
+  // Texto de la pantalla inicial (aparece línea por línea)
+  MENSAJES_INTRO: [
+    "Geraldine...",
+    "Hice algo especial para ti."
+  ],
+
+  // Mensajes que aparecen mientras crece el campo
+  MENSAJES_CAMPO: [
+    "Hay cosas que no necesitan una gran explicación...",
+    "solo necesitan sentirse.",
+    "Hay momentos que parecen pequeños...",
+    "pero terminan convirtiéndose en recuerdos que queremos guardar.",
+    "Por eso hoy quise hacer algo diferente.",
+    "Un pequeño lugar lleno de flores...",
+    "para que por un momento puedas simplemente disfrutarlo.",
+    "Y entre tantas flores...",
+    "quería que hubiera unas especialmente para ti, Geraldine."
+  ],
+
+  // Mensajes del cierre, cuando la cámara se acerca al campo
+  MENSAJES_FINALES: [
+    "Espero que cuando veas esto, sonrías.",
+    "Y que nunca olvides que eres importante para muchas personas.",
+    "Creo en ti, en tu fuerza y en todo lo que puedes superar."
+  ],
+
+  // Firma final.
+  FIRMA: "Con cariño,\nAIRTON",
+
+  // Nombre del archivo de audio. Debe estar en la MISMA carpeta que este
+  // archivo index.html. Ver instrucciones al final de esta respuesta.
+  ARCHIVO_AUDIO: "flores-amarillas.mp3",
+
+  // Cuántas flores crecen automáticamente al inicio (además de las que
+  // Geraldine puede sembrar tocando la pantalla)
+  CANTIDAD_FLORES: 22,
+
+  // Velocidad general de la experiencia. 1 = normal.
+  // Un número más chico (ej: 0.6) hace todo más rápido.
+  // Un número más grande (ej: 1.5) hace todo más lento.
+  VELOCIDAD: 1
+};
+
+/* ========================================================================
+   LÓGICA — en general no hace falta tocar nada de aquí para abajo
+   ======================================================================== */
+(function(){
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const esperar = (ms) => new Promise(r => setTimeout(r, ms * CONFIG.VELOCIDAD));
+  const reduceMovimiento = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const introEl        = $("intro");
+  const lineaNombre     = $("linea-nombre");
+  const lineaSubtexto   = $("linea-subtexto");
+  const botonAbrir      = $("boton-abrir");
+  const escena          = $("escena");
+  const cielo           = $("cielo");
+  const estrellas       = $("estrellas");
+  const zoomEnvoltura   = $("zoom-envoltura");
+  const tierra          = $("tierra");
+  const campo           = $("campo");
+  const semilla         = $("semilla");
+  const parrafoMensaje  = $("parrafo-mensaje");
+  const firmaEl         = $("firma");
+  const controlMusica   = $("control-musica");
+  const musica          = $("musica-fondo");
+
+  let experienciaIniciada = false;
+  let interaccionHabilitada = false;
+  let intervaloParticulas = null;
+
+  // ---- texto inicial -----------------------------------------------
+  lineaNombre.textContent = CONFIG.MENSAJES_INTRO[0] || "";
+  lineaSubtexto.textContent = CONFIG.MENSAJES_INTRO[1] || "";
+
+  async function mostrarIntro(){
+    await esperar(400);
+    lineaNombre.classList.add("visible");
+    await esperar(1300);
+    lineaSubtexto.classList.add("visible");
+    await esperar(1100);
+    botonAbrir.classList.add("visible");
+  }
+  mostrarIntro();
+
+  // ---- crear una flor -------------------------------------------------
+  function crearFlor(xPorcentaje, instantanea){
+    const flor = document.createElement("div");
+    flor.className = "flor";
+
+    const escalaAleatoria = (0.82 + Math.random() * 0.45).toFixed(2);
+    const altoTallo = Math.round(46 + Math.random() * 34);
+    const rotacion = Math.round(-10 + Math.random() * 20);
+
+    flor.style.setProperty("--x", xPorcentaje + "%");
+    flor.style.setProperty("--escala", escalaAleatoria);
+    flor.style.setProperty("--alto-tallo", altoTallo + "px");
+    flor.style.setProperty("--rot", rotacion + "deg");
+
+    const interior = document.createElement("div");
+    interior.className = "flor-interior";
+    interior.style.setProperty("--sway-dur", (3.2 + Math.random() * 2.2).toFixed(2) + "s");
+    interior.style.setProperty("--sway-delay", (-Math.random() * 4).toFixed(2) + "s");
+
+    const tallo = document.createElement("div");
+    tallo.className = "tallo";
+
+    const hoja = document.createElement("div");
+    hoja.className = "hoja";
+
+    const cabeza = document.createElement("div");
+    cabeza.className = "cabeza";
+    for (let i = 0; i < 8; i++){
+      const petalo = document.createElement("div");
+      petalo.className = "petalo";
+      petalo.style.setProperty("--i", i);
+      cabeza.appendChild(petalo);
+    }
+    const centro = document.createElement("div");
+    centro.className = "centro";
+    cabeza.appendChild(centro);
+
+    interior.appendChild(tallo);
+    interior.appendChild(hoja);
+    interior.appendChild(cabeza);
+    flor.appendChild(interior);
+    campo.appendChild(flor);
+
+    if (instantanea || reduceMovimiento){
+      flor.classList.add("crecida");
+    } else {
+      requestAnimationFrame(() => flor.classList.add("creciendo"));
+    }
+    return flor;
+  }
+
+  // ---- partícula / pétalo flotante ------------------------------------
+  function crearParticula(){
+    const p = document.createElement("div");
+    p.className = "particula";
+    const xInicio = Math.random() * 100;
+    const deriva = Math.round(-60 + Math.random() * 120);
+    const giro = Math.round(180 + Math.random() * 360);
+    const duracion = (7 + Math.random() * 6).toFixed(2);
+    p.style.left = xInicio + "%";
+    p.style.bottom = "-5%";
+    p.style.setProperty("--deriva-x", deriva + "px");
+    p.style.setProperty("--giro", giro + "deg");
+    p.style.animationDuration = duracion + "s";
+    escena.appendChild(p);
+    p.addEventListener("animationend", () => p.remove());
+  }
+
+  function iniciarParticulas(){
+    if (reduceMovimiento || intervaloParticulas) return;
+    intervaloParticulas = setInterval(crearParticula, 900);
+  }
+
+  // ---- mostrar mensajes centrales, uno a la vez ------------------------
+  async function mostrarMensaje(texto, duracionVisible){
+    parrafoMensaje.classList.remove("visible");
+    await esperar(600);
+    parrafoMensaje.textContent = texto;
+    // pequeño respiro antes del fade-in para que no se sienta abrupto
+    await esperar(50);
+    parrafoMensaje.classList.add("visible");
+    await esperar(duracionVisible);
+  }
+
+  // ---- interacción: sembrar flores al tocar el campo -------------------
+  campo.addEventListener("click", (evento) => {
+    if (!interaccionHabilitada) return;
+    const rect = campo.getBoundingClientRect();
+    const xPorcentaje = ((evento.clientX - rect.left) / rect.width) * 100;
+    const xLimitado = Math.min(96, Math.max(4, xPorcentaje));
+    crearFlor(xLimitado, false);
+    // un pequeño estallido de pétalos al sembrar
+    for (let i = 0; i < 3; i++){
+      setTimeout(crearParticula, i * 120);
+    }
+  });
+
+  // ---- música ------------------------------------------------------
+  musica.src = CONFIG.ARCHIVO_AUDIO;
+  let musicaSonando = false;
+
+  function actualizarIconoMusica(){
+    controlMusica.textContent = musicaSonando ? "🔊" : "🔈";
+    controlMusica.setAttribute(
+      "aria-label",
+      musicaSonando ? "Pausar música" : "Reproducir música"
+    );
+  }
+
+  async function intentarReproducirMusica(){
+    try{
+      await musica.play();
+      musicaSonando = true;
+      controlMusica.classList.remove("invitar");
+    } catch(err){
+      // el navegador bloqueó la reproducción automática: invitamos a tocar el botón
+      musicaSonando = false;
+      controlMusica.classList.add("invitar");
+    }
+    actualizarIconoMusica();
+  }
+
+  controlMusica.addEventListener("click", async () => {
+    if (musicaSonando){
+      musica.pause();
+      musicaSonando = false;
+    } else {
+      try{
+        await musica.play();
+        musicaSonando = true;
+      } catch(err){
+        musicaSonando = false;
+      }
+    }
+    controlMusica.classList.remove("invitar");
+    actualizarIconoMusica();
+  });
+
+  // ---- secuencia principal --------------------------------------------
+  async function iniciarExperiencia(){
+    if (experienciaIniciada) return;
+    experienciaIniciada = true;
+
+    introEl.classList.add("oculto");
+    escena.removeAttribute("aria-hidden");
+    controlMusica.classList.add("visible");
+
+    // el clic del botón es el gesto del usuario que habilita el audio
+    intentarReproducirMusica();
+
+    await esperar(700);
+
+    // amanecer progresivo
+    cielo.classList.add("fase-1");
+    await esperar(1400);
+
+    tierra.classList.add("visible");
+    await esperar(900);
+
+    // semilla
+    semilla.classList.add("visible");
+    await esperar(1100);
+    semilla.classList.add("germinando");
+    cielo.classList.add("fase-2");
+    estrellas.classList.add("oculto");
+    await esperar(1000);
+    semilla.style.opacity = "0";
+    semilla.style.transition = "opacity .5s ease";
+
+    // primera flor, nace justo en el centro
+    crearFlor(50, false);
+    await esperar(1300);
+
+    interaccionHabilitada = true;
+    iniciarParticulas();
+    cielo.classList.add("fase-3");
+
+    // resto de las flores, apareciendo de a poco y desde el centro hacia afuera
+    const totalAutomaticas = Math.max(0, CONFIG.CANTIDAD_FLORES - 1);
+    for (let i = 0; i < totalAutomaticas; i++){
+      const progreso = i / Math.max(1, totalAutomaticas - 1); // 0..1
+      // se van esparciendo por todo el campo, con algo de aleatoriedad
+      const base = 8 + progreso * 84;
+      const x = Math.min(96, Math.max(4, base + (Math.random() * 14 - 7)));
+      crearFlor(x, false);
+      await esperar(220 + Math.random() * 160);
+    }
+
+    cielo.classList.add("fase-4");
+    await esperar(600);
+
+    // mensajes centrales del campo
+    for (let i = 0; i < CONFIG.MENSAJES_CAMPO.length; i++){
+      await mostrarMensaje(CONFIG.MENSAJES_CAMPO[i], 4200);
+    }
+    parrafoMensaje.classList.remove("visible");
+    await esperar(900);
+
+    // cierre: acercamiento de cámara
+    zoomEnvoltura.classList.add("acercar");
+    await esperar(1600);
+
+    for (let i = 0; i < CONFIG.MENSAJES_FINALES.length; i++){
+      await mostrarMensaje(CONFIG.MENSAJES_FINALES[i], 5000);
+    }
+    parrafoMensaje.classList.remove("visible");
+    await esperar(900);
+
+    firmaEl.textContent = CONFIG.FIRMA;
+    firmaEl.classList.add("visible");
+  }
+
+  botonAbrir.addEventListener("click", iniciarExperiencia);
+  botonAbrir.addEventListener("keyup", (e) => {
+    if (e.key === "Enter" || e.key === " ") iniciarExperiencia();
+  });
+})();
+</script>
+</body>
+</html>
